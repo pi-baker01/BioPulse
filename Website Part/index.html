@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BioPulse Pi - College Biometric Fingerprint Attendance System with 8-period tracking, consecutive absence alerts, teacher photo entry, and Raspberry Pi hardware bridge.">
+  <title>BioPulse Pi | College Biometric Attendance System</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Cyber Canvas Effect -->
+  <div class="bg-effects">
+    <div class="glow-sphere sphere-1"></div>
+    <div class="glow-sphere sphere-2"></div>
+    <div class="cyber-grid"></div>
+  </div>
+
+  <div id="app" class="app-wrapper">
+
+    <!-- Top Command Header -->
+    <header class="top-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-fingerprint glow-icon"></i>
+          <span class="logo-pulse"></span>
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-name">BioPulse <span class="badge-pi"><i class="fa-brands fa-raspberry-pi"></i> RASPBERRY PI</span></h1>
+          <p class="brand-tagline">College Biometric Fingerprint Attendance System • 8-Period Matrix</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Telemetry Bar -->
+      <div class="header-stats">
+        <div class="stat-pill">
+          <i class="fa-solid fa-users text-cyan"></i>
+          <div>
+            <span class="stat-value" id="stat-total-students">0</span>
+            <span class="stat-label">Students</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <i class="fa-solid fa-clock text-violet"></i>
+          <div>
+            <span class="stat-value" id="stat-current-period">P3 (10:30)</span>
+            <span class="stat-label">Active Period</span>
+          </div>
+        </div>
+        <div class="stat-pill alert-pill" id="pill-absence-warning">
+          <i class="fa-solid fa-triangle-exclamation text-amber"></i>
+          <div>
+            <span class="stat-value" id="stat-flagged-students">0</span>
+            <span class="stat-label">2-Day Absences</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <i class="fa-solid fa-signal text-emerald"></i>
+          <div>
+            <span class="stat-value" id="stat-pi-status">ONLINE</span>
+            <span class="stat-label">Raspberry Pi</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme & Time Header Tools -->
+      <div class="header-actions">
+        <div class="live-clock" id="live-clock">00:00:00 AM</div>
+        <button id="theme-toggle" class="btn-icon" title="Toggle Dark/Light Mode">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Alert Banner for 2-Day Consecutive Absences -->
+    <div id="consecutive-absence-banner" class="alert-banner hidden">
+      <div class="alert-content">
+        <i class="fa-solid fa-triangle-exclamation alert-icon"></i>
+        <div class="alert-text">
+          <strong>⚠️ CONSECUTIVE ABSENCE WARNING DETECTED:</strong>
+          <span id="banner-absence-names">Loading flagged students...</span>
+        </div>
+      </div>
+      <div class="alert-banner-actions">
+        <button class="btn btn-warning btn-sm" onclick="app.switchTab('consecutive-alerts')">
+          <i class="fa-solid fa-eye"></i> View Flagged List
+        </button>
+        <button class="btn-close-banner" onclick="document.getElementById('consecutive-absence-banner').classList.add('hidden')">&times;</button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="navigation-bar">
+      <button class="nav-tab active" data-tab="terminal">
+        <i class="fa-solid fa-cash-register"></i> Door Kiosk / Scan
+      </button>
+      <button class="nav-tab" data-tab="daily-summary">
+        <i class="fa-solid fa-table-cells"></i> 8-Period Daily Summary
+      </button>
+      <button class="nav-tab" data-tab="monthly-logs">
+        <i class="fa-solid fa-calendar-days"></i> Monthly Logs
+      </button>
+      <button class="nav-tab" data-tab="consecutive-alerts">
+        <i class="fa-solid fa-bell-concierge"></i> 2-Day Absence Alerts <span class="badge-count" id="nav-absence-badge">0</span>
+      </button>
+      <button class="nav-tab" data-tab="teacher-portal">
+        <i class="fa-solid fa-user-plus"></i> Teacher Portal & Students
+      </button>
+      <button class="nav-tab" data-tab="raspberry-pi">
+        <i class="fa-brands fa-raspberry-pi"></i> Raspberry Pi Setup
+      </button>
+    </nav>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="main-content">
+
+      <!-- ========================================== -->
+      <!-- TAB 1: DOOR KIOSK / LIVE FINGERPRINT SCAN  -->
+      <!-- ========================================== -->
+      <section id="tab-terminal" class="tab-pane active">
+        <div class="kiosk-grid">
+          
+          <!-- Left Column: Biometric Terminal Scanner -->
+          <div class="glass-card scanner-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-fingerprint text-cyan"></i> Raspberry Pi Biometric Terminal</h3>
+              <span class="status-indicator online" id="terminal-hardware-status">
+                <span class="dot"></span> Raspberry Pi R307 Connected
+              </span>
+            </div>
+
+            <!-- Active Period Bar -->
+            <div class="active-period-selector">
+              <label><i class="fa-solid fa-layer-group"></i> Current Class Period:</label>
+              <select id="period-selector" class="form-select">
+                <option value="1">Period 1 (09:00 - 09:50 AM) - Data Structures</option>
+                <option value="2">Period 2 (09:50 - 10:40 AM) - Computer Networks</option>
+                <option value="3" selected>Period 3 (10:40 - 11:30 AM) - Operating Systems</option>
+                <option value="4">Period 4 (11:30 - 12:20 PM) - Database Systems</option>
+                <option value="5">Period 5 (01:15 - 02:05 PM) - Software Engineering</option>
+                <option value="6">Period 6 (02:05 - 02:55 PM) - Web Development Lab</option>
+                <option value="7">Period 7 (02:55 - 03:45 PM) - Artificial Intelligence</option>
+                <option value="8">Period 8 (03:45 - 04:35 PM) - Cyber Security</option>
+              </select>
+            </div>
+
+            <!-- Fingerprint Scanner Interactive View -->
+            <div class="scanner-stage">
+              <div class="fingerprint-wrapper" id="fingerprint-trigger" title="Click to Simulate Fingerprint Scan from Raspberry Pi">
+                <canvas id="scanner-canvas" width="220" height="260"></canvas>
+                <div class="laser-scanner"></div>
+                <div class="scan-overlay">
+                  <i class="fa-solid fa-hand-pointer touch-hint"></i>
+                  <span>TAP FINGERPRINT TO MARK ATTENDANCE</span>
+                </div>
+              </div>
+
+              <!-- Match & Sound Controls -->
+              <div class="scanner-controls">
+                <button class="btn btn-cyan btn-lg" id="btn-scan-random">
+                  <i class="fa-solid fa-bolt"></i> Simulate Pi Hardware Scan
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-sound">
+                  <i class="fa-solid fa-volume-high"></i> Audio Feedback: ON
+                </button>
+              </div>
+
+              <!-- Quick Student Simulator Selector -->
+              <div class="quick-student-select">
+                <label>Select Specific Student to Scan:</label>
+                <div class="input-group">
+                  <select id="select-quick-student" class="form-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                  <button class="btn btn-outline" id="btn-scan-selected">Scan Selected</button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Live Verification Display & Activity Feed -->
+          <div class="kiosk-side-column">
+            
+            <!-- Live Verification Display Card -->
+            <div class="glass-card verification-card" id="verification-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-id-card text-violet"></i> Biometric Scan Verification</h3>
+                <span class="time-stamp" id="scan-timestamp">Waiting for scan...</span>
+              </div>
+
+              <div class="verification-body" id="verification-body">
+                <div class="scan-placeholder">
+                  <i class="fa-solid fa-address-card placeholder-icon"></i>
+                  <p>Place finger on the Raspberry Pi sensor to verify attendance for <strong id="current-period-name">Period 3</strong>.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Stream Activity Feed -->
+            <div class="glass-card feed-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-list-check text-emerald"></i> Live Today's Log Feed</h3>
+                <span class="badge-count" id="feed-count-badge">0 Scans</span>
+              </div>
+
+              <div class="feed-list" id="terminal-feed-list">
+                <!-- Dynamic Scan Entries -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 2: 8-PERIOD DAILY ATTENDANCE SUMMARY   -->
+      <!-- ========================================== -->
+      <section id="tab-daily-summary" class="tab-pane">
+        <div class="glass-card">
+          <div class="table-toolbar">
+            <div class="toolbar-title">
+              <h2><i class="fa-solid fa-table-cells text-cyan"></i> 8-Period Daily Attendance Matrix</h2>
+              <p>Real-time period-by-period tracking for every student today.</p>
+            </div>
+
+            <div class="toolbar-filters">
+              <div class="filter-item">
+                <label><i class="fa-solid fa-calendar"></i> Date:</label>
+                <input type="date" id="daily-date-picker" class="form-control">
+              </div>
+              <div class="filter-item">
+                <label><i class="fa-solid fa-graduation-cap"></i> Department:</label>
+                <select id="filter-dept" class="form-select">
+                  <option value="ALL">All Departments</option>
+                  <option value="CSE">Computer Science (CSE)</option>
+                  <option value="ECE">Electronics (ECE)</option>
+                  <option value="IT">Information Technology (IT)</option>
+                </select>
+              </div>
+              <div class="filter-item search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-student-daily" class="form-control" placeholder="Search student name or roll...">
+              </div>
+              <button class="btn btn-emerald" id="btn-export-daily-csv">
+                <i class="fa-solid fa-file-csv"></i> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Period Reference Legend -->
+          <div class="period-legend">
+            <span class="legend-title">8 Periods:</span>
+            <span class="legend-item"><span class="chip-legend present">P1</span> 09:00 - 09:50</span>
+            <span class="legend-item"><span class="chip-legend present">P2</span> 09:50 - 10:40</span>
+            <span class="legend-item"><span class="chip-legend present">P3</span> 10:40 - 11:30</span>
+            <span class="legend-item"><span class="chip-legend present">P4</span> 11:30 - 12:20</span>
+            <span class="legend-item"><span class="chip-legend present">P5</span> 01:15 - 02:05</span>
+            <span class="legend-item"><span class="chip-legend present">P6</span> 02:05 - 02:55</span>
+            <span class="legend-item"><span class="chip-legend present">P7</span> 02:55 - 03:45</span>
+            <span class="legend-item"><span class="chip-legend present">P8</span> 03:45 - 04:35</span>
+          </div>
+
+          <!-- 8-Period Matrix Table -->
+          <div class="table-responsive">
+            <table class="data-table" id="table-daily-matrix">
+              <thead>
+                <tr>
+                  <th>Student Info</th>
+                  <th>Roll / PRN</th>
+                  <th>Dept</th>
+                  <th class="text-center">P1</th>
+                  <th class="text-center">P2</th>
+                  <th class="text-center">P3</th>
+                  <th class="text-center">P4</th>
+                  <th class="text-center">P5</th>
+                  <th class="text-center">P6</th>
+                  <th class="text-center">P7</th>
+                  <th class="text-center">P8</th>
+                  <th class="text-center">Daily Total</th>
+                  <th class="text-center">Absence Alert</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="daily-matrix-tbody">
+                <!-- Dynamic rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: MONTHLY ATTENDANCE LOGS             -->
+      <!-- ========================================== -->
+      <section id="tab-monthly-logs" class="tab-pane">
+        <div class="glass-card">
+          <div class="table-toolbar">
+            <div class="toolbar-title">
+              <h2><i class="fa-solid fa-calendar-days text-violet"></i> Monthly Cumulative Attendance Analytics</h2>
+              <p>Historical logs across all working days and 8 daily periods.</p>
+            </div>
+
+            <div class="toolbar-filters">
+              <div class="filter-item">
+                <label><i class="fa-solid fa-calendar-check"></i> Month:</label>
+                <select id="monthly-select-month" class="form-select">
+                  <option value="2026-07" selected>July 2026</option>
+                  <option value="2026-06">June 2026</option>
+                  <option value="2026-05">May 2026</option>
+                </select>
+              </div>
+              <div class="filter-item search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-student-monthly" class="form-control" placeholder="Search by name or roll...">
+              </div>
+              <button class="btn btn-cyan" id="btn-export-monthly-csv">
+                <i class="fa-solid fa-file-excel"></i> Export Monthly Report
+              </button>
+            </div>
+          </div>
+
+          <!-- Monthly High Level Summary Cards -->
+          <div class="stats-overview-grid">
+            <div class="overview-card">
+              <div class="card-icon bg-cyan"><i class="fa-solid fa-chart-line"></i></div>
+              <div>
+                <span class="overview-value" id="monthly-avg-attendance">86.4%</span>
+                <span class="overview-label">Class Average Attendance</span>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="card-icon bg-emerald"><i class="fa-solid fa-award"></i></div>
+              <div>
+                <span class="overview-value" id="monthly-regular-students">14 Students</span>
+                <span class="overview-label">> 85% High Attendance</span>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="card-icon bg-amber"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <div>
+                <span class="overview-value" id="monthly-critical-students">3 Students</span>
+                <span class="overview-label">&lt; 75% Low Attendance Alert</span>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="card-icon bg-violet"><i class="fa-solid fa-business-time"></i></div>
+              <div>
+                <span class="overview-value">160 Periods</span>
+                <span class="overview-label">Total Periods Conducted</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monthly Log Table -->
+          <div class="table-responsive">
+            <table class="data-table" id="table-monthly-logs">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Roll / PRN</th>
+                  <th>Dept</th>
+                  <th class="text-center">Total Conducted</th>
+                  <th class="text-center">Periods Present</th>
+                  <th class="text-center">Periods Absent</th>
+                  <th class="text-center">Attendance %</th>
+                  <th class="text-center">Status Score</th>
+                  <th class="text-center">Detailed Calendar</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-logs-tbody">
+                <!-- Dynamic monthly log rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 4: 2-DAY CONSECUTIVE ABSENCE ALERTS    -->
+      <!-- ========================================== -->
+      <section id="tab-consecutive-alerts" class="tab-pane">
+        <div class="glass-card">
+          <div class="card-header border-bottom">
+            <div>
+              <h2><i class="fa-solid fa-bell-concierge text-amber"></i> 2-Day Repeated Absence Alert Board</h2>
+              <p>Automated detection for students absent for 2 or more consecutive days.</p>
+            </div>
+            <span class="badge-alert-total" id="total-flagged-count">3 Students Flagged</span>
+          </div>
+
+          <div class="alert-intro-box">
+            <i class="fa-solid fa-circle-info info-icon"></i>
+            <p>
+              <strong>College Attendance Rule Enforcement:</strong> Students highlighted here have missed all 8 periods for at least 2 consecutive days. The system allows teachers and administration to instantly flag records, generate guardian call notices, or send automated warnings.
+            </p>
+          </div>
+
+          <!-- Flagged Students Grid Cards -->
+          <div class="flagged-cards-grid" id="flagged-cards-container">
+            <!-- Dynamic Flagged Cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 5: TEACHER PORTAL & STUDENT ENTRY      -->
+      <!-- ========================================== -->
+      <section id="tab-teacher-portal" class="tab-pane">
+        <div class="grid-split">
+          
+          <!-- Left Column: Add New Student Form (With Photo Upload & Name Input) -->
+          <div class="glass-card">
+            <div class="card-header border-bottom">
+              <h3><i class="fa-solid fa-user-plus text-cyan"></i> Teacher Input: Register Student & Photo</h3>
+            </div>
+
+            <form id="form-add-student" class="student-form">
+              
+              <!-- Student Photo Upload Section -->
+              <div class="photo-upload-container">
+                <label class="form-label">Student Photograph:</label>
+                <div class="photo-preview-wrapper" id="photo-dropzone">
+                  <img id="student-photo-preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" alt="Student Preview">
+                  <div class="photo-overlay">
+                    <i class="fa-solid fa-camera camera-icon"></i>
+                    <span>Click or Drag Photo</span>
+                  </div>
+                  <input type="file" id="input-student-photo" accept="image/*" class="hidden-file-input">
+                </div>
+                <div class="photo-buttons">
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-upload-trigger">
+                    <i class="fa-solid fa-upload"></i> Upload Image
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-webcam-snap">
+                    <i class="fa-solid fa-video"></i> WebCam Snap
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Student Full Name *</label>
+                  <input type="text" id="input-student-name" class="form-control" placeholder="e.g. Rahul Sharma" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Roll Number / PRN *</label>
+                  <input type="text" id="input-student-roll" class="form-control" placeholder="e.g. CS2024045" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Department / Branch *</label>
+                  <select id="input-student-dept" class="form-select" required>
+                    <option value="CSE">Computer Science (CSE)</option>
+                    <option value="ECE">Electronics (ECE)</option>
+                    <option value="IT">Information Technology (IT)</option>
+                    <option value="MECH">Mechanical Engg (MECH)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Batch / Year *</label>
+                  <input type="text" id="input-student-batch" class="form-control" placeholder="e.g. 2024-2028 (3rd Year)">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Fingerprint Sensor ID (R307/AS608) *</label>
+                  <input type="number" id="input-fingerprint-id" class="form-control" placeholder="e.g. 101" min="1" max="1000" required>
+                  <small class="form-text">Hardware Template ID registered on Raspberry Pi sensor.</small>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Guardian / Mobile Contact</label>
+                  <input type="tel" id="input-guardian-phone" class="form-control" placeholder="+91 9876543210">
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" class="btn btn-cyan btn-lg w-100">
+                  <i class="fa-solid fa-save"></i> Save Student & Enroll Fingerprint
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right Column: Registered Students Directory -->
+          <div class="glass-card">
+            <div class="card-header border-bottom">
+              <div>
+                <h3><i class="fa-solid fa-users-rectangle text-violet"></i> Registered Student Directory</h3>
+                <p>Manage student photos, names, roll numbers, and hardware IDs.</p>
+              </div>
+              <div class="search-box">
+                <input type="text" id="search-directory" class="form-control" placeholder="Filter roster...">
+              </div>
+            </div>
+
+            <div class="student-directory-grid" id="student-directory-list">
+              <!-- Dynamic Roster Cards -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 6: RASPBERRY PI SETUP & HARDWARE CODE  -->
+      <!-- ========================================== -->
+      <section id="tab-raspberry-pi" class="tab-pane">
+        <div class="glass-card">
+          <div class="card-header border-bottom">
+            <div>
+              <h2><i class="fa-brands fa-raspberry-pi text-danger"></i> Raspberry Pi Hardware Integration & Setup</h2>
+              <p>Complete guide and Python script to connect your Raspberry Pi + R307/AS608 Fingerprint Sensor to this website API.</p>
+            </div>
+            <span class="status-indicator online">
+              <span class="dot"></span> Web Bridge Server Endpoint Ready
+            </span>
+          </div>
+
+          <!-- Raspberry Pi Architecture Diagram -->
+          <div class="pi-setup-grid">
+            <div class="pi-info-box">
+              <h3><i class="fa-solid fa-diagram-project"></i> Hardware Connection Topology</h3>
+              <ul class="pi-steps">
+                <li><span class="step-num">1</span> <strong>Hardware Connections:</strong> Connect R307 / AS608 Fingerprint Module to Raspberry Pi GPIO Header:
+                  <ul>
+                    <li><code>VCC</code> ➔ Raspberry Pi 5V (Pin 2)</li>
+                    <li><code>GND</code> ➔ Raspberry Pi GND (Pin 6)</li>
+                    <li><code>TX</code> ➔ Raspberry Pi RXD GPIO15 (Pin 10)</li>
+                    <li><code>RX</code> ➔ Raspberry Pi TXD GPIO14 (Pin 8)</li>
+                  </ul>
+                </li>
+                <li><span class="step-num">2</span> <strong>Raspberry Pi Software:</strong> Install Python dependencies:
+                  <pre class="code-inline">pip install pyfingerprint requests socketIO-client</pre>
+                </li>
+                <li><span class="step-num">3</span> <strong>Run Python Bridge:</strong> Execute the script on your Pi. When a student places their finger on the sensor, the Pi matches the template ID and sends a real-time HTTP POST request to mark attendance for the current period!</li>
+              </ul>
+            </div>
+
+            <div class="pi-config-box">
+              <h3><i class="fa-solid fa-sliders"></i> Web Receiver Endpoint Settings</h3>
+              <div class="form-group">
+                <label class="form-label">Raspberry Pi Target IP Address:</label>
+                <input type="text" id="pi-ip-setting" class="form-control" value="192.168.1.105">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Web Server Endpoint URL:</label>
+                <input type="text" id="pi-endpoint-setting" class="form-control" value="http://localhost:3000/api/biometric-scan">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Raspberry Pi Terminal Connection State:</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" value="CONNECTED (Listening on Socket / HTTP)" readonly>
+                  <button class="btn btn-emerald" id="btn-test-pi-ping"><i class="fa-solid fa-network-wired"></i> Test Ping</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Python Code Generator Box -->
+          <div class="code-box-wrapper">
+            <div class="code-box-header">
+              <span><i class="fa-brands fa-python text-warning"></i> <code>raspberry_pi_biometric_scanner.py</code> (Python Source Code for Pi)</span>
+              <button class="btn btn-outline btn-sm" id="btn-copy-code"><i class="fa-solid fa-copy"></i> Copy Code</button>
+            </div>
+            <pre class="code-display" id="python-code-block"><code># ================================================================
+# BioPulse Pi - Raspberry Pi Fingerprint Attendance Node
+# Hardware: Raspberry Pi 4 / 3B + R307 / AS608 Optical Sensor
+# ================================================================
+
+import time
+import requests
+from pyfingerprint.pyfingerprint import PyFingerprint
+
+SERVER_URL = "http://192.168.1.100:3000/api/biometric-scan"
+SENSOR_PORT = "/dev/ttyS0" # UART GPIO14/15 on Raspberry Pi
+BAUD_RATE = 57600
+
+print("[BioPulse Pi] Initializing Raspberry Pi Fingerprint Sensor...")
+
+try:
+    f = PyFingerprint(SENSOR_PORT, BAUD_RATE, 0xFFFFFFFF, 0x00000000)
+    if not f.verifyPassword():
+        raise Exception('Sensor password verification failed!')
+    print("[BioPulse Pi] Sensor Online! Enrolled Templates:", f.getTemplateCount())
+except Exception as e:
+    print('[ERROR] Sensor initialization error:', str(e))
+    exit(1)
+
+print("[BioPulse Pi] Ready for Student Scans. Touch finger to scan...")
+
+while True:
+    try:
+        # Wait for finger press
+        if f.readImage():
+            f.convertImage(0x01)
+            result = f.searchTemplate()
+
+            positionNumber = result[0]
+            accuracyScore = result[1]
+
+            if positionNumber >= 0:
+                print(f"[SUCCESS] Match Found! Finger ID #{positionNumber} (Confidence: {accuracyScore})")
+                
+                # Payload to Web App
+                payload = {
+                    "fingerprint_id": positionNumber,
+                    "confidence": accuracyScore,
+                    "device_id": "RASPBERRY_PI_NODE_01",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                }
+                
+                try:
+                    res = requests.post(SERVER_URL, json=payload, timeout=3)
+                    print("[API RESPONSE]", res.status_code, res.text)
+                except Exception as api_err:
+                    print("[API ERROR] Could not reach Web App server:", api_err)
+                
+                time.sleep(2) # Avoid duplicate rapid scans
+            else:
+                print("[WARNING] Fingerprint not recognized in database!")
+                time.sleep(1)
+
+    except Exception as scan_err:
+        print("[ERROR] Scan loop exception:", str(scan_err))
+        time.sleep(1)
+</code></pre>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: Student Monthly Calendar Detail View -->
+  <div id="modal-monthly-detail" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-student-name-title"><i class="fa-solid fa-user"></i> Student Attendance Calendar</h3>
+        <button class="btn-close-modal" id="btn-close-monthly-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-monthly-calendar-body">
+        <!-- Dynamic calendar grid -->
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Code -->
+  <script src="app.js"></script>
+</body>
+</html>

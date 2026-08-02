@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BioPulse Pi - College Biometric Fingerprint Attendance System with 8-period tracking, consecutive absence alerts, teacher photo entry, and Raspberry Pi hardware bridge.">
+  <title>BioPulse Pi | College Biometric Attendance System</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+/* ==========================================================================
+   BIOPULSE PI - COLLEGE BIOMETRIC ATTENDANCE SYSTEM STYLES
+   ========================================================================== */
+:root {
+  --bg-dark: #070913;
+  --bg-card: rgba(15, 23, 42, 0.75);
+  --bg-card-hover: rgba(30, 41, 59, 0.85);
+  --border-card: rgba(255, 255, 255, 0.1);
+  --border-glow: rgba(0, 242, 254, 0.3);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --primary-cyan: #00f2fe;
+  --primary-blue: #4facfe;
+  --primary-violet: #8b5cf6;
+  --primary-purple: #c084fc;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --accent-danger: #ff2a5f;
+  --font-heading: 'Orbitron', 'Rajdhani', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+  --shadow-glow-cyan: 0 0 25px rgba(0, 242, 254, 0.25);
+  --shadow-glow-rose: 0 0 25px rgba(255, 42, 95, 0.3);
+  --shadow-glass: 0 12px 32px 0 rgba(0, 0, 0, 0.37);
+  --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+  --bg-dark: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --bg-card-hover: rgba(248, 250, 252, 0.95);
+  --border-card: rgba(0, 0, 0, 0.1);
+  --border-glow: rgba(0, 180, 216, 0.3);
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  --shadow-glass: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; overflow-x: hidden; line-height: 1.5; transition: background-color 0.3s ease, color 0.3s ease; }
+.bg-effects { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.glow-sphere { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.18; }
+.sphere-1 { width: 500px; height: 500px; background: var(--primary-cyan); top: -100px; left: -100px; }
+.sphere-2 { width: 600px; height: 600px; background: var(--primary-violet); bottom: -150px; right: -150px; }
+.cyber-grid { position: absolute; inset: 0; background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px); background-size: 40px 40px; }
+.app-wrapper { position: relative; z-index: 1; max-width: 1600px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+.top-header { background: var(--bg-card); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; box-shadow: var(--shadow-glass); }
+.header-brand { display: flex; align-items: center; gap: 16px; }
+.brand-logo { position: relative; width: 48px; height: 48px; background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(139, 92, 246, 0.2)); border: 1px solid var(--border-glow); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; }
+.glow-icon { font-size: 24px; color: var(--primary-cyan); filter: drop-shadow(0 0 8px var(--primary-cyan)); }
+.logo-pulse { position: absolute; inset: -4px; border-radius: var(--radius-md); border: 2px solid var(--primary-cyan); opacity: 0; animation: pulse-ring 2s infinite cubic-bezier(0.215, 0.61, 0.355, 1); }
+@keyframes pulse-ring { 0% { transform: scale(0.9); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 0; } 100% { transform: scale(1.1); opacity: 0; } }
+.brand-name { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+.badge-pi { font-size: 0.65rem; font-family: var(--font-body); background: rgba(255, 42, 95, 0.15); border: 1px solid rgba(255, 42, 95, 0.4); color: #ff2a5f; padding: 3px 8px; border-radius: var(--radius-full); font-weight: 700; letter-spacing: 0.5px; }
+.brand-tagline { font-size: 0.85rem; color: var(--text-muted); }
+.header-stats { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.stat-pill { background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 8px 16px; display: flex; align-items: center; gap: 12px; }
+.stat-pill i { font-size: 18px; }
+.stat-value { display: block; font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700; }
+.stat-label { display: block; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.alert-pill { border-color: rgba(245, 158, 11, 0.4); background: rgba(245, 158, 11, 0.08); }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.live-clock { font-family: var(--font-heading); font-size: 0.9rem; font-weight: 700; color: var(--primary-cyan); background: rgba(0, 242, 254, 0.08); border: 1px solid var(--border-glow); padding: 8px 14px; border-radius: var(--radius-md); }
+.btn-icon { width: 40px; height: 40px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-card); color: var(--text-main); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: var(--transition-fast); }
+.btn-icon:hover { background: rgba(255, 255, 255, 0.12); border-color: var(--primary-cyan); color: var(--primary-cyan); }
+.alert-banner { background: linear-gradient(90deg, rgba(255, 42, 95, 0.25) 0%, rgba(245, 158, 11, 0.25) 100%); border: 1px solid rgba(255, 42, 95, 0.5); border-radius: var(--radius-md); padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: var(--shadow-glow-rose); animation: slideDown 0.4s ease-out; }
+.alert-banner.hidden { display: none !important; }
+@keyframes slideDown { from { transform: translateY(-15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.alert-content { display: flex; align-items: center; gap: 14px; }
+.alert-icon { font-size: 22px; color: #ff2a5f; animation: pulse-bell 1.5s infinite; }
+@keyframes pulse-bell { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+.alert-text { font-size: 0.9rem; }
+.alert-banner-actions { display: flex; align-items: center; gap: 10px; }
+.btn-close-banner { background: transparent; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; padding: 0 5px; }
+.navigation-bar { display: flex; align-items: center; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.nav-tab { background: var(--bg-card); backdrop-filter: blur(12px); border: 1px solid var(--border-card); border-radius: var(--radius-md); color: var(--text-muted); padding: 12px 20px; font-family: var(--font-heading); font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; white-space: nowrap; transition: var(--transition-fast); position: relative; }
+.nav-tab:hover { background: var(--bg-card-hover); color: var(--text-main); border-color: rgba(255, 255, 255, 0.2); }
+.nav-tab.active { background: linear-gradient(135deg, rgba(0, 242, 254, 0.15), rgba(139, 92, 246, 0.15)); border-color: var(--primary-cyan); color: var(--primary-cyan); box-shadow: var(--shadow-glow-cyan); }
+.badge-count { background: var(--accent-danger); color: #fff; font-size: 0.7rem; padding: 2px 7px; border-radius: var(--radius-full); font-weight: 700; }
+.main-content { position: relative; min-height: 600px; }
+.tab-pane { display: none; animation: fadeIn 0.3s ease; }
+.tab-pane.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.glass-card { background: var(--bg-card); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border-card); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-glass); display: flex; flex-direction: column; gap: 20px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.card-header h2, .card-header h3 { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.card-header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+.border-bottom { border-bottom: 1px solid var(--border-card); padding-bottom: 16px; }
+.status-indicator { font-size: 0.78rem; font-weight: 600; display: flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: var(--radius-full); background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-card); }
+.status-indicator.online { border-color: rgba(16, 185, 129, 0.4); color: var(--accent-emerald); }
+.status-indicator .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-emerald); box-shadow: 0 0 8px var(--accent-emerald); }
+.kiosk-grid { display: grid; grid-template-columns: 480px 1fr; gap: 20px; }
+@media (max-width: 1024px) { .kiosk-grid { grid-template-columns: 1fr; } }
+.active-period-selector { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.active-period-selector label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.scanner-stage { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px 0; }
+.fingerprint-wrapper { position: relative; width: 240px; height: 280px; background: radial-gradient(circle, rgba(0, 242, 254, 0.08) 0%, rgba(15, 23, 42, 0.9) 100%); border: 2px solid var(--border-glow); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; box-shadow: 0 0 30px rgba(0, 242, 254, 0.15); transition: var(--transition-fast); }
+.fingerprint-wrapper:hover { border-color: var(--primary-cyan); box-shadow: var(--shadow-glow-cyan); transform: scale(1.02); }
+#scanner-canvas { width: 220px; height: 260px; }
+.laser-scanner { position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--primary-cyan), #fff, var(--primary-cyan), transparent); box-shadow: 0 0 15px var(--primary-cyan), 0 0 30px var(--primary-cyan); opacity: 0; pointer-events: none; }
+.fingerprint-wrapper.scanning .laser-scanner { opacity: 1; animation: laserSweep 1.8s infinite ease-in-out; }
+@keyframes laserSweep { 0% { top: 5%; } 50% { top: 90%; } 100% { top: 5%; } }
+.scan-overlay { position: absolute; bottom: 12px; display: flex; align-items: center; gap: 8px; font-family: var(--font-heading); font-size: 0.68rem; letter-spacing: 0.5px; color: var(--text-muted); background: rgba(0, 0, 0, 0.6); padding: 4px 10px; border-radius: var(--radius-full); }
+.touch-hint { color: var(--primary-cyan); animation: bounce 1.5s infinite; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.scanner-controls { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.quick-student-select { width: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.quick-student-select label { font-size: 0.78rem; color: var(--text-muted); }
+.kiosk-side-column { display: flex; flex-direction: column; gap: 20px; }
+.verification-body { min-height: 180px; display: flex; align-items: center; justify-content: center; }
+.scan-placeholder { text-align: center; color: var(--text-dim); padding: 30px; }
+.placeholder-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+.student-result-card { width: 100%; display: flex; align-items: center; gap: 20px; padding: 16px; background: rgba(255, 255, 255, 0.04); border-radius: var(--radius-md); border: 1px solid var(--border-card); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.result-photo { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary-cyan); box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); }
+.result-details { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.result-name { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
+.result-meta { font-size: 0.85rem; color: var(--text-muted); }
+.result-score { font-size: 0.78rem; color: var(--accent-emerald); font-weight: 600; }
+.result-badge { padding: 6px 14px; border-radius: var(--radius-full); font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px; }
+.result-badge.success { background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.4); }
+.result-badge.error { background: rgba(255, 42, 95, 0.2); color: #ff2a5f; border: 1px solid rgba(255, 42, 95, 0.4); }
+.feed-list { max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.feed-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-card); border-radius: var(--radius-sm); font-size: 0.85rem; }
+.feed-student { display: flex; align-items: center; gap: 10px; }
+.feed-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.table-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.toolbar-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.filter-item { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-muted); }
+.search-box { position: relative; min-width: 220px; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px; }
+.search-box .form-control { padding-left: 34px; }
+.period-legend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 16px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-md); border: 1px solid var(--border-card); font-size: 0.78rem; color: var(--text-muted); }
+.legend-title { font-weight: 700; color: var(--text-main); }
+.chip-legend { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+.chip-legend.present { background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); }
+.table-responsive { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+.data-table th { background: rgba(255, 255, 255, 0.04); padding: 14px 16px; font-family: var(--font-heading); font-size: 0.75rem; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 1px solid var(--border-card); white-space: nowrap; }
+.data-table td { padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); vertical-align: middle; }
+.data-table tbody tr { transition: var(--transition-fast); }
+.data-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+.student-info-cell { display: flex; align-items: center; gap: 12px; }
+.table-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-glow); }
+.student-name { font-weight: 600; display: block; }
+.student-roll-sub { font-size: 0.75rem; color: var(--text-muted); }
+.period-chip { width: 32px; height: 32px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: var(--transition-fast); }
+.period-chip:hover { transform: scale(1.15); }
+.period-chip.P { background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.4); }
+.period-chip.A { background: rgba(255, 42, 95, 0.2); color: #ff2a5f; border: 1px solid rgba(255, 42, 95, 0.4); }
+.period-chip.L { background: rgba(245, 158, 11, 0.2); color: var(--accent-amber); border: 1px solid rgba(245, 158, 11, 0.4); }
+.daily-total-pill { font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; padding: 4px 10px; border-radius: var(--radius-full); }
+.daily-total-pill.good { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
+.daily-total-pill.warning { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+.daily-total-pill.critical { background: rgba(255, 42, 95, 0.15); color: #ff2a5f; }
+.absence-alert-badge { background: rgba(255, 42, 95, 0.2); border: 1px solid rgba(255, 42, 95, 0.5); color: #ff2a5f; font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: var(--radius-full); display: inline-flex; align-items: center; gap: 6px; animation: pulse-border 2s infinite; }
+@keyframes pulse-border { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 42, 95, 0.4); } 50% { box-shadow: 0 0 0 6px rgba(255, 42, 95, 0); } }
+.badge-normal { font-size: 0.75rem; color: var(--text-muted); }
+.stats-overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.overview-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 18px; display: flex; align-items: center; gap: 16px; }
+.card-icon { width: 48px; height: 48px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.bg-cyan { background: rgba(0, 242, 254, 0.15); color: var(--primary-cyan); }
+.bg-emerald { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
+.bg-amber { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+.bg-violet { background: rgba(139, 92, 246, 0.15); color: var(--primary-violet); }
+.overview-value { display: block; font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; }
+.overview-label { font-size: 0.78rem; color: var(--text-muted); }
+.alert-intro-box { background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: var(--radius-md); padding: 16px; display: flex; align-items: flex-start; gap: 14px; font-size: 0.88rem; }
+.info-icon { font-size: 20px; color: var(--accent-amber); margin-top: 2px; }
+.flagged-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.flagged-card { background: rgba(255, 42, 95, 0.06); border: 1px solid rgba(255, 42, 95, 0.3); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(255, 42, 95, 0.1); }
+.flagged-card-header { display: flex; align-items: center; gap: 14px; }
+.flagged-photo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #ff2a5f; }
+.flagged-name { font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700; }
+.flagged-meta { font-size: 0.8rem; color: var(--text-muted); }
+.absence-counter-tag { background: #ff2a5f; color: #fff; font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700; padding: 4px 10px; border-radius: var(--radius-full); align-self: flex-start; }
+.flagged-actions { display: flex; gap: 10px; }
+.grid-split { display: grid; grid-template-columns: 440px 1fr; gap: 20px; }
+@media (max-width: 1024px) { .grid-split { grid-template-columns: 1fr; } }
+.student-form { display: flex; flex-direction: column; gap: 18px; }
+.photo-upload-container { display: flex; flex-direction: column; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 16px; }
+.photo-preview-wrapper { position: relative; width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 3px solid var(--primary-cyan); cursor: pointer; box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
+#student-photo-preview { width: 100%; height: 100%; object-fit: cover; }
+.photo-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 0.65rem; color: #fff; opacity: 0; transition: var(--transition-fast); }
+.photo-preview-wrapper:hover .photo-overlay { opacity: 1; }
+.hidden-file-input { display: none; }
+.photo-buttons { display: flex; gap: 8px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full-width { grid-column: 1 / -1; }
+.form-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+.form-control, .form-select { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-card); border-radius: var(--radius-sm); color: var(--text-main); padding: 10px 14px; font-size: 0.88rem; font-family: var(--font-body); transition: var(--transition-fast); width: 100%; }
+.form-control:focus, .form-select:focus { outline: none; border-color: var(--primary-cyan); background: rgba(255, 255, 255, 0.08); box-shadow: 0 0 12px rgba(0, 242, 254, 0.2); }
+.form-select option { background: #0f172a; color: #fff; }
+.form-text { font-size: 0.72rem; color: var(--text-dim); }
+.student-directory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; max-height: 600px; overflow-y: auto; }
+.roster-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 14px; display: flex; align-items: center; gap: 12px; transition: var(--transition-fast); }
+.roster-card:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--primary-cyan); }
+.roster-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-glow); }
+.roster-info { flex: 1; }
+.roster-name { font-weight: 600; font-size: 0.92rem; }
+.roster-sub { font-size: 0.75rem; color: var(--text-muted); }
+.roster-sensor-id { font-family: var(--font-heading); font-size: 0.7rem; color: var(--primary-cyan); display: inline-block; margin-top: 2px; }
+.pi-setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 900px) { .pi-setup-grid { grid-template-columns: 1fr; } }
+.pi-steps { list-style: none; display: flex; flex-direction: column; gap: 16px; margin-top: 12px; font-size: 0.88rem; }
+.pi-steps li { position: relative; padding-left: 40px; }
+.step-num { position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: rgba(255, 42, 95, 0.2); color: #ff2a5f; border: 1px solid rgba(255, 42, 95, 0.4); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; }
+.code-inline { background: rgba(0, 0, 0, 0.5); padding: 4px 10px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; color: var(--primary-cyan); display: inline-block; margin-top: 4px; }
+.code-box-wrapper { background: #090d16; border: 1px solid var(--border-card); border-radius: var(--radius-md); overflow: hidden; }
+.code-box-header { background: rgba(255, 255, 255, 0.04); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-card); font-size: 0.85rem; }
+.code-display { padding: 16px; overflow-x: auto; font-family: 'Share Tech Mono', monospace, sans-serif; font-size: 0.82rem; line-height: 1.6; color: #38edf8; max-height: 420px; }
+.btn { font-family: var(--font-heading); font-size: 0.85rem; font-weight: 600; padding: 10px 20px; border-radius: var(--radius-sm); border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: var(--transition-fast); text-decoration: none; }
+.btn-cyan { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); color: #050b14; box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3); }
+.btn-cyan:hover { filter: brightness(1.15); box-shadow: var(--shadow-glow-cyan); }
+.btn-emerald { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; }
+.btn-emerald:hover { filter: brightness(1.1); }
+.btn-warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #fff; }
+.btn-danger { background: linear-gradient(135deg, #ff2a5f 0%, #e11d48 100%); color: #fff; }
+.btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px solid var(--border-card); }
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+.btn-outline { background: transparent; border: 1px solid var(--border-card); color: var(--text-main); }
+.btn-outline:hover { border-color: var(--primary-cyan); color: var(--primary-cyan); }
+.btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+.btn-lg { padding: 14px 24px; font-size: 0.95rem; }
+.w-100 { width: 100%; }
+.input-group { display: flex; gap: 8px; }
+.input-group .form-control, .input-group .form-select { flex: 1; }
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.modal-backdrop.hidden { display: none !important; }
+.modal-card { background: var(--bg-dark); border: 1px solid var(--border-glow); border-radius: var(--radius-lg); width: 100%; max-width: 650px; padding: 24px; box-shadow: var(--shadow-glow-cyan); animation: modalPop 0.3s ease; }
+@keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.modal-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-card); padding-bottom: 14px; margin-bottom: 16px; }
+.btn-close-modal { background: transparent; border: none; color: var(--text-main); font-size: 24px; cursor: pointer; }
+.text-cyan { color: var(--primary-cyan) !important; }
+.text-violet { color: var(--primary-violet) !important; }
+.text-emerald { color: var(--accent-emerald) !important; }
+.text-amber { color: var(--accent-amber) !important; }
+.text-danger { color: #ff2a5f !important; }
+.text-center { text-align: center !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Background Cyber Canvas Effect -->
+  <div class="bg-effects">
+    <div class="glow-sphere sphere-1"></div>
+    <div class="glow-sphere sphere-2"></div>
+    <div class="cyber-grid"></div>
+  </div>
+
+  <div id="app" class="app-wrapper">
+
+    <!-- Top Command Header -->
+    <header class="top-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-fingerprint glow-icon"></i>
+          <span class="logo-pulse"></span>
+        </div>
+        <div class="brand-info">
+          <h1 class="brand-name">BioPulse <span class="badge-pi"><i class="fa-brands fa-raspberry-pi"></i> RASPBERRY PI</span></h1>
+          <p class="brand-tagline">College Biometric Fingerprint Attendance System • 8-Period Matrix</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics Telemetry Bar -->
+      <div class="header-stats">
+        <div class="stat-pill">
+          <i class="fa-solid fa-users text-cyan"></i>
+          <div>
+            <span class="stat-value" id="stat-total-students">0</span>
+            <span class="stat-label">Students</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <i class="fa-solid fa-clock text-violet"></i>
+          <div>
+            <span class="stat-value" id="stat-current-period">P3 (10:30)</span>
+            <span class="stat-label">Active Period</span>
+          </div>
+        </div>
+        <div class="stat-pill alert-pill" id="pill-absence-warning">
+          <i class="fa-solid fa-triangle-exclamation text-amber"></i>
+          <div>
+            <span class="stat-value" id="stat-flagged-students">0</span>
+            <span class="stat-label">2-Day Absences</span>
+          </div>
+        </div>
+        <div class="stat-pill">
+          <i class="fa-solid fa-signal text-emerald"></i>
+          <div>
+            <span class="stat-value" id="stat-pi-status">ONLINE</span>
+            <span class="stat-label">Raspberry Pi</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme & Time Header Tools -->
+      <div class="header-actions">
+        <div class="live-clock" id="live-clock">00:00:00 AM</div>
+        <button id="theme-toggle" class="btn-icon" title="Toggle Dark/Light Mode">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Alert Banner for 2-Day Consecutive Absences -->
+    <div id="consecutive-absence-banner" class="alert-banner hidden">
+      <div class="alert-content">
+        <i class="fa-solid fa-triangle-exclamation alert-icon"></i>
+        <div class="alert-text">
+          <strong>⚠️ CONSECUTIVE ABSENCE WARNING DETECTED:</strong>
+          <span id="banner-absence-names">Loading flagged students...</span>
+        </div>
+      </div>
+      <div class="alert-banner-actions">
+        <button class="btn btn-warning btn-sm" onclick="app.switchTab('consecutive-alerts')">
+          <i class="fa-solid fa-eye"></i> View Flagged List
+        </button>
+        <button class="btn-close-banner" onclick="document.getElementById('consecutive-absence-banner').classList.add('hidden')">&times;</button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="navigation-bar">
+      <button class="nav-tab active" data-tab="terminal">
+        <i class="fa-solid fa-cash-register"></i> Door Kiosk / Scan
+      </button>
+      <button class="nav-tab" data-tab="daily-summary">
+        <i class="fa-solid fa-table-cells"></i> 8-Period Daily Summary
+      </button>
+      <button class="nav-tab" data-tab="monthly-logs">
+        <i class="fa-solid fa-calendar-days"></i> Monthly Logs
+      </button>
+      <button class="nav-tab" data-tab="consecutive-alerts">
+        <i class="fa-solid fa-bell-concierge"></i> 2-Day Absence Alerts <span class="badge-count" id="nav-absence-badge">0</span>
+      </button>
+      <button class="nav-tab" data-tab="teacher-portal">
+        <i class="fa-solid fa-user-plus"></i> Teacher Portal & Students
+      </button>
+      <button class="nav-tab" data-tab="raspberry-pi">
+        <i class="fa-brands fa-raspberry-pi"></i> Raspberry Pi Setup
+      </button>
+    </nav>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="main-content">
+
+      <!-- TAB 1: DOOR KIOSK -->
+      <section id="tab-terminal" class="tab-pane active">
+        <div class="kiosk-grid">
+          <div class="glass-card scanner-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-fingerprint text-cyan"></i> Raspberry Pi Biometric Terminal</h3>
+              <span class="status-indicator online" id="terminal-hardware-status">
+                <span class="dot"></span> Raspberry Pi R307 Connected
+              </span>
+            </div>
+            <div class="active-period-selector">
+              <label><i class="fa-solid fa-layer-group"></i> Current Class Period:</label>
+              <select id="period-selector" class="form-select">
+                <option value="1">Period 1 (09:00 - 09:50 AM) - Data Structures</option>
+                <option value="2">Period 2 (09:50 - 10:40 AM) - Computer Networks</option>
+                <option value="3" selected>Period 3 (10:40 - 11:30 AM) - Operating Systems</option>
+                <option value="4">Period 4 (11:30 - 12:20 PM) - Database Systems</option>
+                <option value="5">Period 5 (01:15 - 02:05 PM) - Software Engineering</option>
+                <option value="6">Period 6 (02:05 - 02:55 PM) - Web Development Lab</option>
+                <option value="7">Period 7 (02:55 - 03:45 PM) - Artificial Intelligence</option>
+                <option value="8">Period 8 (03:45 - 04:35 PM) - Cyber Security</option>
+              </select>
+            </div>
+            <div class="scanner-stage">
+              <div class="fingerprint-wrapper" id="fingerprint-trigger" title="Click to Simulate Fingerprint Scan from Raspberry Pi">
+                <canvas id="scanner-canvas" width="220" height="260"></canvas>
+                <div class="laser-scanner"></div>
+                <div class="scan-overlay">
+                  <i class="fa-solid fa-hand-pointer touch-hint"></i>
+                  <span>TAP FINGERPRINT TO MARK ATTENDANCE</span>
+                </div>
+              </div>
+              <div class="scanner-controls">
+                <button class="btn btn-cyan btn-lg" id="btn-scan-random">
+                  <i class="fa-solid fa-bolt"></i> Simulate Pi Hardware Scan
+                </button>
+                <button class="btn btn-secondary btn-sm" id="btn-toggle-sound">
+                  <i class="fa-solid fa-volume-high"></i> Audio Feedback: ON
+                </button>
+              </div>
+              <div class="quick-student-select">
+                <label>Select Specific Student to Scan:</label>
+                <div class="input-group">
+                  <select id="select-quick-student" class="form-select"></select>
+                  <button class="btn btn-outline" id="btn-scan-selected">Scan Selected</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="kiosk-side-column">
+            <div class="glass-card verification-card" id="verification-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-id-card text-violet"></i> Biometric Scan Verification</h3>
+                <span class="time-stamp" id="scan-timestamp">Waiting for scan...</span>
+              </div>
+              <div class="verification-body" id="verification-body">
+                <div class="scan-placeholder">
+                  <i class="fa-solid fa-address-card placeholder-icon"></i>
+                  <p>Place finger on the Raspberry Pi sensor to verify attendance for <strong id="current-period-name">Period 3</strong>.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-card feed-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-list-check text-emerald"></i> Live Today's Log Feed</h3>
+                <span class="badge-count" id="feed-count-badge">0 Scans</span>
+              </div>
+              <div class="feed-list" id="terminal-feed-list"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: 8-PERIOD DAILY SUMMARY -->
+      <section id="tab-daily-summary" class="tab-pane">
+        <div class="glass-card">
+          <div class="table-toolbar">
+            <div class="toolbar-title">
+              <h2><i class="fa-solid fa-table-cells text-cyan"></i> 8-Period Daily Attendance Matrix</h2>
+              <p>Real-time period-by-period tracking for every student today.</p>
+            </div>
+            <div class="toolbar-filters">
+              <div class="filter-item">
+                <label><i class="fa-solid fa-calendar"></i> Date:</label>
+                <input type="date" id="daily-date-picker" class="form-control">
+              </div>
+              <div class="filter-item">
+                <label><i class="fa-solid fa-graduation-cap"></i> Department:</label>
+                <select id="filter-dept" class="form-select">
+                  <option value="ALL">All Departments</option>
+                  <option value="CSE">Computer Science (CSE)</option>
+                  <option value="ECE">Electronics (ECE)</option>
+                  <option value="IT">Information Technology (IT)</option>
+                </select>
+              </div>
+              <div class="filter-item search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-student-daily" class="form-control" placeholder="Search student name or roll...">
+              </div>
+              <button class="btn btn-emerald" id="btn-export-daily-csv">
+                <i class="fa-solid fa-file-csv"></i> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="period-legend">
+            <span class="legend-title">8 Periods:</span>
+            <span class="legend-item"><span class="chip-legend present">P1</span> 09:00 - 09:50</span>
+            <span class="legend-item"><span class="chip-legend present">P2</span> 09:50 - 10:40</span>
+            <span class="legend-item"><span class="chip-legend present">P3</span> 10:40 - 11:30</span>
+            <span class="legend-item"><span class="chip-legend present">P4</span> 11:30 - 12:20</span>
+            <span class="legend-item"><span class="chip-legend present">P5</span> 01:15 - 02:05</span>
+            <span class="legend-item"><span class="chip-legend present">P6</span> 02:05 - 02:55</span>
+            <span class="legend-item"><span class="chip-legend present">P7</span> 02:55 - 03:45</span>
+            <span class="legend-item"><span class="chip-legend present">P8</span> 03:45 - 04:35</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="table-daily-matrix">
+              <thead>
+                <tr>
+                  <th>Student Info</th>
+                  <th>Roll / PRN</th>
+                  <th>Dept</th>
+                  <th class="text-center">P1</th>
+                  <th class="text-center">P2</th>
+                  <th class="text-center">P3</th>
+                  <th class="text-center">P4</th>
+                  <th class="text-center">P5</th>
+                  <th class="text-center">P6</th>
+                  <th class="text-center">P7</th>
+                  <th class="text-center">P8</th>
+                  <th class="text-center">Daily Total</th>
+                  <th class="text-center">Absence Alert</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="daily-matrix-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: MONTHLY LOGS -->
+      <section id="tab-monthly-logs" class="tab-pane">
+        <div class="glass-card">
+          <div class="table-toolbar">
+            <div class="toolbar-title">
+              <h2><i class="fa-solid fa-calendar-days text-violet"></i> Monthly Cumulative Attendance Analytics</h2>
+              <p>Historical logs across all working days and 8 daily periods.</p>
+            </div>
+            <div class="toolbar-filters">
+              <div class="filter-item">
+                <label><i class="fa-solid fa-calendar-check"></i> Month:</label>
+                <select id="monthly-select-month" class="form-select">
+                  <option value="2026-07" selected>July 2026</option>
+                  <option value="2026-06">June 2026</option>
+                  <option value="2026-05">May 2026</option>
+                </select>
+              </div>
+              <div class="filter-item search-box">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-student-monthly" class="form-control" placeholder="Search by name or roll...">
+              </div>
+              <button class="btn btn-cyan" id="btn-export-monthly-csv">
+                <i class="fa-solid fa-file-excel"></i> Export Monthly Report
+              </button>
+            </div>
+          </div>
+
+          <div class="stats-overview-grid">
+            <div class="overview-card">
+              <div class="card-icon bg-cyan"><i class="fa-solid fa-chart-line"></i></div>
+              <div>
+                <span class="overview-value" id="monthly-avg-attendance">86.4%</span>
+                <span class="overview-label">Class Average Attendance</span>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="card-icon bg-emerald"><i class="fa-solid fa-award"></i></div>
+              <div>
+                <span class="overview-value" id="monthly-regular-students">14 Students</span>
+                <span class="overview-label">> 85% High Attendance</span>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="card-icon bg-amber"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <div>
+                <span class="overview-value" id="monthly-critical-students">3 Students</span>
+                <span class="overview-label">&lt; 75% Low Attendance Alert</span>
+              </div>
+            </div>
+            <div class="overview-card">
+              <div class="card-icon bg-violet"><i class="fa-solid fa-business-time"></i></div>
+              <div>
+                <span class="overview-value">160 Periods</span>
+                <span class="overview-label">Total Periods Conducted</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="table-monthly-logs">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Roll / PRN</th>
+                  <th>Dept</th>
+                  <th class="text-center">Total Conducted</th>
+                  <th class="text-center">Periods Present</th>
+                  <th class="text-center">Periods Absent</th>
+                  <th class="text-center">Attendance %</th>
+                  <th class="text-center">Status Score</th>
+                  <th class="text-center">Detailed Calendar</th>
+                </tr>
+              </thead>
+              <tbody id="monthly-logs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: 2-DAY CONSECUTIVE ABSENCE ALERTS -->
+      <section id="tab-consecutive-alerts" class="tab-pane">
+        <div class="glass-card">
+          <div class="card-header border-bottom">
+            <div>
+              <h2><i class="fa-solid fa-bell-concierge text-amber"></i> 2-Day Repeated Absence Alert Board</h2>
+              <p>Automated detection for students absent for 2 or more consecutive days.</p>
+            </div>
+            <span class="badge-alert-total" id="total-flagged-count">3 Students Flagged</span>
+          </div>
+
+          <div class="alert-intro-box">
+            <i class="fa-solid fa-circle-info info-icon"></i>
+            <p>
+              <strong>College Attendance Rule Enforcement:</strong> Students highlighted here have missed all 8 periods for at least 2 consecutive days. The system allows teachers and administration to instantly flag records, generate guardian call notices, or send automated warnings.
+            </p>
+          </div>
+
+          <div class="flagged-cards-grid" id="flagged-cards-container"></div>
+        </div>
+      </section>
+
+      <!-- TAB 5: TEACHER PORTAL & STUDENT ENTRY -->
+      <section id="tab-teacher-portal" class="tab-pane">
+        <div class="grid-split">
+          <div class="glass-card">
+            <div class="card-header border-bottom">
+              <h3><i class="fa-solid fa-user-plus text-cyan"></i> Teacher Input: Register Student & Photo</h3>
+            </div>
+            <form id="form-add-student" class="student-form">
+              <div class="photo-upload-container">
+                <label class="form-label">Student Photograph:</label>
+                <div class="photo-preview-wrapper" id="photo-dropzone">
+                  <img id="student-photo-preview" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80" alt="Student Preview">
+                  <div class="photo-overlay">
+                    <i class="fa-solid fa-camera camera-icon"></i>
+                    <span>Click or Drag Photo</span>
+                  </div>
+                  <input type="file" id="input-student-photo" accept="image/*" class="hidden-file-input">
+                </div>
+                <div class="photo-buttons">
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-upload-trigger">
+                    <i class="fa-solid fa-upload"></i> Upload Image
+                  </button>
+                  <button type="button" class="btn btn-outline btn-sm" id="btn-webcam-snap">
+                    <i class="fa-solid fa-video"></i> WebCam Snap
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Student Full Name *</label>
+                  <input type="text" id="input-student-name" class="form-control" placeholder="e.g. Rahul Sharma" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Roll Number / PRN *</label>
+                  <input type="text" id="input-student-roll" class="form-control" placeholder="e.g. CS2024045" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Department / Branch *</label>
+                  <select id="input-student-dept" class="form-select" required>
+                    <option value="CSE">Computer Science (CSE)</option>
+                    <option value="ECE">Electronics (ECE)</option>
+                    <option value="IT">Information Technology (IT)</option>
+                    <option value="MECH">Mechanical Engg (MECH)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Batch / Year *</label>
+                  <input type="text" id="input-student-batch" class="form-control" placeholder="e.g. 2024-2028 (3rd Year)">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Fingerprint Sensor ID (R307/AS608) *</label>
+                  <input type="number" id="input-fingerprint-id" class="form-control" placeholder="e.g. 101" min="1" max="1000" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Guardian / Mobile Contact</label>
+                  <input type="tel" id="input-guardian-phone" class="form-control" placeholder="+91 9876543210">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-cyan btn-lg w-100">
+                  <i class="fa-solid fa-save"></i> Save Student & Enroll Fingerprint
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="glass-card">
+            <div class="card-header border-bottom">
+              <div>
+                <h3><i class="fa-solid fa-users-rectangle text-violet"></i> Registered Student Directory</h3>
+                <p>Manage student photos, names, roll numbers, and hardware IDs.</p>
+              </div>
+              <div class="search-box">
+                <input type="text" id="search-directory" class="form-control" placeholder="Filter roster...">
+              </div>
+            </div>
+            <div class="student-directory-grid" id="student-directory-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: RASPBERRY PI SETUP -->
+      <section id="tab-raspberry-pi" class="tab-pane">
+        <div class="glass-card">
+          <div class="card-header border-bottom">
+            <div>
+              <h2><i class="fa-brands fa-raspberry-pi text-danger"></i> Raspberry Pi Hardware Integration & Setup</h2>
+              <p>Complete guide and Python script to connect your Raspberry Pi + R307/AS608 Fingerprint Sensor to this website API.</p>
+            </div>
+            <span class="status-indicator online">
+              <span class="dot"></span> Web Bridge Server Endpoint Ready
+            </span>
+          </div>
+
+          <div class="pi-setup-grid">
+            <div class="pi-info-box">
+              <h3><i class="fa-solid fa-diagram-project"></i> Hardware Connection Topology</h3>
+              <ul class="pi-steps">
+                <li><span class="step-num">1</span> <strong>Hardware Connections:</strong> Connect R307 / AS608 Fingerprint Module to Raspberry Pi GPIO Header:
+                  <ul>
+                    <li><code>VCC</code> ➔ Raspberry Pi 5V (Pin 2)</li>
+                    <li><code>GND</code> ➔ Raspberry Pi GND (Pin 6)</li>
+                    <li><code>TX</code> ➔ Raspberry Pi RXD GPIO15 (Pin 10)</li>
+                    <li><code>RX</code> ➔ Raspberry Pi TXD GPIO14 (Pin 8)</li>
+                  </ul>
+                </li>
+                <li><span class="step-num">2</span> <strong>Raspberry Pi Software:</strong> Install Python dependencies:
+                  <pre class="code-inline">pip install pyfingerprint requests socketIO-client</pre>
+                </li>
+                <li><span class="step-num">3</span> <strong>Run Python Bridge:</strong> Execute the script on your Pi to send live attendance POST events!</li>
+              </ul>
+            </div>
+
+            <div class="pi-config-box">
+              <h3><i class="fa-solid fa-sliders"></i> Web Receiver Endpoint Settings</h3>
+              <div class="form-group">
+                <label class="form-label">Raspberry Pi Target IP Address:</label>
+                <input type="text" id="pi-ip-setting" class="form-control" value="192.168.1.105">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Web Server Endpoint URL:</label>
+                <input type="text" id="pi-endpoint-setting" class="form-control" value="http://localhost:3000/api/biometric-scan">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Raspberry Pi Terminal Connection State:</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" value="CONNECTED (Listening on Socket / HTTP)" readonly>
+                  <button class="btn btn-emerald" id="btn-test-pi-ping"><i class="fa-solid fa-network-wired"></i> Test Ping</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="code-box-wrapper">
+            <div class="code-box-header">
+              <span><i class="fa-brands fa-python text-warning"></i> <code>raspberry_pi_biometric_scanner.py</code> (Python Source Code for Pi)</span>
+              <button class="btn btn-outline btn-sm" id="btn-copy-code"><i class="fa-solid fa-copy"></i> Copy Code</button>
+            </div>
+            <pre class="code-display" id="python-code-block"><code>import time
+import requests
+from pyfingerprint.pyfingerprint import PyFingerprint
+
+SERVER_URL = "http://192.168.1.100:3000/api/biometric-scan"
+SENSOR_PORT = "/dev/ttyS0"
+BAUD_RATE = 57600
+
+print("[BioPulse Pi] Initializing Raspberry Pi Fingerprint Sensor...")
+
+try:
+    f = PyFingerprint(SENSOR_PORT, BAUD_RATE, 0xFFFFFFFF, 0x00000000)
+    if not f.verifyPassword():
+        raise Exception('Sensor password verification failed!')
+    print("[BioPulse Pi] Sensor Online! Enrolled Templates:", f.getTemplateCount())
+except Exception as e:
+    print('[ERROR] Sensor initialization error:', str(e))
+    exit(1)
+
+print("[BioPulse Pi] Ready for Student Scans. Touch finger to scan...")
+
+while True:
+    try:
+        if f.readImage():
+            f.convertImage(0x01)
+            result = f.searchTemplate()
+            positionNumber = result[0]
+            accuracyScore = result[1]
+
+            if positionNumber >= 0:
+                print(f"[SUCCESS] Match Found! Finger ID #{positionNumber}")
+                payload = {
+                    "fingerprint_id": positionNumber,
+                    "confidence": accuracyScore,
+                    "device_id": "RASPBERRY_PI_NODE_01",
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+                }
+                res = requests.post(SERVER_URL, json=payload, timeout=3)
+                time.sleep(2)
+            else:
+                print("[WARNING] Fingerprint not recognized!")
+                time.sleep(1)
+    except Exception as scan_err:
+        time.sleep(1)
+</code></pre>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: Student Monthly Calendar -->
+  <div id="modal-monthly-detail" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-student-name-title"><i class="fa-solid fa-user"></i> Student Attendance Calendar</h3>
+        <button class="btn-close-modal" id="btn-close-monthly-modal">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-monthly-calendar-body"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html> 
